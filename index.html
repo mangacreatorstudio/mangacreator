@@ -550,7 +550,7 @@
   /* ── FOOTER ── */
   footer {
     background:var(--ink); color:rgba(255,255,255,.45);
-    padding:36px 24px;
+    padding:44px 24px 32px;
     text-align:center;
   }
   .footer-logo {
@@ -570,6 +570,35 @@
     text-decoration:none; transition:color .2s;
   }
   .footer-links a:hover { color:rgba(255,255,255,.8); }
+
+  .footer-meta {
+    display:flex; flex-direction:column; align-items:center;
+    gap:16px; margin-top:20px; padding-top:20px;
+    border-top:1px solid rgba(255,255,255,.08);
+  }
+  .footer-twitter {
+    display:inline-flex; align-items:center; gap:8px;
+    background:rgba(255,255,255,.06);
+    border:1px solid rgba(255,255,255,.1);
+    border-radius:20px; padding:7px 16px;
+    font-size:12px; color:rgba(255,255,255,.55);
+    text-decoration:none; transition:all .2s;
+  }
+  .footer-twitter:hover {
+    background:rgba(255,255,255,.1);
+    color:rgba(255,255,255,.9);
+    border-color:rgba(255,255,255,.25);
+  }
+  .footer-twitter svg { opacity:.7; flex-shrink:0; }
+  .footer-orynth img {
+    border-radius:8px; opacity:.85; transition:opacity .2s;
+  }
+  .footer-orynth img:hover { opacity:1; }
+  .footer-built {
+    font-size:11px; color:rgba(255,255,255,.25);
+    letter-spacing:.5px; text-transform:uppercase;
+    margin-bottom:4px;
+  }
 
   /* ── RESPONSIVE DESKTOP ── */
   @media(min-width:640px) {
@@ -899,6 +928,24 @@
     <li><a href="#">Blog</a></li>
   </ul>
   <p>© 2025 MangaCreator. All rights reserved.</p>
+
+  <div class="footer-meta">
+    <div>
+      <p class="footer-built">Built &amp; maintained by</p>
+      <a href="https://twitter.com/mangacreatorai" target="_blank" rel="noopener" class="footer-twitter">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+          <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.741l7.73-8.835L1.254 2.25H8.08l4.253 5.622 5.912-5.622Zm-1.161 17.52h1.833L7.084 4.126H5.117L17.083 19.77Z"/>
+        </svg>
+        @mangacreatorai
+      </a>
+    </div>
+
+    <div class="footer-orynth">
+      <a href="https://orynth.dev/projects/manga-creator" target="_blank" rel="noopener">
+        <img src="https://orynth.dev/api/badge/manga-creator?theme=light&style=default" alt="Featured on Orynth" width="260" height="80" />
+      </a>
+    </div>
+  </div>
 </footer>
 
 <script>
