@@ -768,9 +768,7 @@
       </div>
       <div class="phone-body">
         <div class="phone-label">Your Story Prompt</div>
-        <div class="phone-textarea" id="prompt-display">
-          A young warrior discovers a cursed sword in a forgotten temple...<span class="cursor"></span>
-        </div>
+        <textarea class="phone-textarea" id="prompt-input" placeholder="A young warrior discovers a cursed sword in a forgotten temple..." style="resize:none;outline:none;border:1px solid var(--border);background:var(--paper);border-radius:10px;padding:12px 14px;font-size:12px;color:var(--ink);line-height:1.5;min-height:68px;width:100%;font-family:'DM Sans',sans-serif;"></textarea>
 
         <div class="phone-label">Genre</div>
         <div class="phone-tags">
@@ -780,10 +778,10 @@
           <span class="phone-tag">🚀 Sci-Fi</span>
         </div>
 
-        <button class="phone-btn">✦ Generate Manga</button>
+        <button class="phone-btn" id="generate-btn" onclick="generateManga()">✦ Generate Manga</button>
 
         <div class="phone-label">Preview Panels</div>
-        <div class="phone-panels">
+        <div class="phone-panels" id="phone-panels">
           <div class="panel-cell" style="background:#111">
             <span>🗡️</span>
             <span class="panel-caption">Chapter 1 — Awakening</span>
@@ -796,6 +794,16 @@
             <span>👁️</span>
             <span class="panel-caption">A vision appears</span>
           </div>
+        </div>
+
+        <!-- AI Result Area -->
+        <div id="ai-result" style="display:none; margin-top:14px;">
+          <div class="phone-label">✦ AI Generated Story</div>
+          <div id="ai-synopsis" style="background:var(--paper);border:1px solid var(--border);border-radius:10px;padding:12px 14px;font-size:11px;color:var(--ink);line-height:1.6;margin-bottom:10px;"></div>
+          <div class="phone-label">💬 Character Dialogue</div>
+          <div id="ai-dialogue" style="background:var(--ink);border-radius:10px;padding:12px 14px;font-size:11px;color:rgba(255,255,255,0.85);line-height:1.6;margin-bottom:10px;"></div>
+          <div class="phone-label">📖 Chapter Synopsis</div>
+          <div id="ai-chapter" style="background:var(--paper);border:1px solid var(--accent);border-radius:10px;padding:12px 14px;font-size:11px;color:var(--ink);line-height:1.6;"></div>
         </div>
       </div>
     </div>
@@ -1117,25 +1125,9 @@
 </footer>
 
 <script>
-  // Typing animation for mock phone
-  const texts = [
-    "A young warrior discovers a cursed sword in a forgotten temple...",
-    "Two rivals must team up to save their dying world from darkness...",
-    "A girl who can see ghosts falls in love with one...",
-    "An exiled prince returns home — as his kingdom's greatest enemy..."
-  ];
-  let ti = 0, ci = 0, el = document.getElementById('prompt-display');
-  function type() {
-    if (ci < texts[ti].length) {
-      el.innerHTML = texts[ti].substring(0, ci+1) + '<span class="cursor"></span>';
-      ci++; setTimeout(type, 42);
-    } else {
-      setTimeout(() => {
-        ci = 0; ti = (ti+1) % texts.length; type();
-      }, 2400);
-    }
-  }
-  type();
+  // ── DEEPSEEK API CONFIG ──
+  const DEEPSEEK_API_KEY = "sk-IcZa36HREywBikKP7EYpQbDu9nKSrh9iITfgHPjKmTyVpsyy";
+  const DEEPSEEK_MODEL = "deepseek-chat";
 
   // Tag toggle
   document.querySelectorAll('.phone-tag').forEach(tag => {
@@ -1152,6 +1144,120 @@
       if (target) { e.preventDefault(); target.scrollIntoView({behavior:'smooth'}); }
     });
   });
+
+  // ── PANEL EMOJIS per genre ──
+  const genreEmojis = {
+    '⚔️ Action':  ['⚔️','🔥','💥'],
+    '🌸 Romance': ['🌸','💌','🌙'],
+    '💀 Dark':    ['💀','🌑','👁️'],
+    '🚀 Sci-Fi':  ['🚀','🌌','🤖'],
+  };
+
+  function getSelectedGenre() {
+    const el = document.querySelector('.phone-tag.on');
+    return el ? el.textContent.trim() : '⚔️ Action';
+  }
+
+  function updatePanels(genre, title) {
+    const emojis = genreEmojis[genre] || ['✦','★','◆'];
+    const panels = document.getElementById('phone-panels');
+    panels.innerHTML = `
+      <div class="panel-cell" style="background:#111">
+        <span>${emojis[0]}</span>
+        <span class="panel-caption">${title}</span>
+      </div>
+      <div class="panel-cell">
+        <span>${emojis[1]}</span>
+        <span class="panel-caption">Scene unfolds...</span>
+      </div>
+      <div class="panel-cell" style="background:#f0ebe4">
+        <span>${emojis[2]}</span>
+        <span class="panel-caption">To be continued...</span>
+      </div>
+    `;
+  }
+
+  async function generateManga() {
+    const prompt = document.getElementById('prompt-input').value.trim();
+    if (!prompt) {
+      alert('Please write your story prompt first!');
+      return;
+    }
+
+    const genre = getSelectedGenre();
+    const btn = document.getElementById('generate-btn');
+    const resultArea = document.getElementById('ai-result');
+
+    // Loading state
+    btn.textContent = '⏳ Generating...';
+    btn.disabled = true;
+    resultArea.style.display = 'none';
+
+    const systemPrompt = `You are a manga story generator. Given a user's story prompt and genre, generate the following in JSON format ONLY (no markdown, no extra text):
+{
+  "chapterTitle": "short chapter title",
+  "synopsis": "2-3 sentence story synopsis (prompt-style description)",
+  "dialogue": [
+    {"character": "Character Name", "line": "dialogue line"},
+    {"character": "Character Name", "line": "dialogue line"},
+    {"character": "Character Name", "line": "dialogue line"}
+  ],
+  "chapterSynopsis": "full chapter 1 synopsis in 4-5 sentences describing scenes, tension, and cliffhanger"
+}`;
+
+    try {
+      const res = await fetch('https://api.deepseek.com/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
+        },
+        body: JSON.stringify({
+          model: DEEPSEEK_MODEL,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: `Prompt: ${prompt}\nGenre: ${genre}` }
+          ],
+          max_tokens: 800,
+          temperature: 0.9
+        })
+      });
+
+      if (!res.ok) throw new Error(`API error: ${res.status}`);
+      const data = await res.json();
+      const raw = data.choices[0].message.content.trim();
+
+      // Parse JSON
+      const clean = raw.replace(/```json|```/g, '').trim();
+      const result = JSON.parse(clean);
+
+      // Update panels
+      updatePanels(genre, result.chapterTitle || 'Chapter 1');
+
+      // Render synopsis
+      document.getElementById('ai-synopsis').innerHTML =
+        `<strong style="font-size:12px;font-family:'Cormorant Garamond',serif;">${result.chapterTitle}</strong><br/><br/>${result.synopsis}`;
+
+      // Render dialogue
+      const dialogueHtml = result.dialogue.map(d =>
+        `<div style="margin-bottom:8px;"><span style="color:var(--accent);font-weight:600;">${d.character}:</span> "${d.line}"</div>`
+      ).join('');
+      document.getElementById('ai-dialogue').innerHTML = dialogueHtml;
+
+      // Render chapter synopsis
+      document.getElementById('ai-chapter').innerHTML = result.chapterSynopsis;
+
+      resultArea.style.display = 'block';
+      resultArea.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+    } catch (err) {
+      console.error(err);
+      alert('Failed to generate. Check your API key or internet connection.\n\n' + err.message);
+    } finally {
+      btn.textContent = '✦ Generate Manga';
+      btn.disabled = false;
+    }
+  }
 </script>
 </body>
 </html>
